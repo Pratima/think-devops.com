@@ -1,0 +1,156 @@
+<!DOCTYPE HTML>
+<html>
+	<head>
+		<title>Load Balancing - nginx + HAProxy</title>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<!--[if lte IE 8]><script src="assets/js/ie/html5shiv.js"></script><![endif]-->
+		<link rel="stylesheet" href="../assets/css/main.css" />
+		<!--[if lte IE 8]><link rel="stylesheet" href="assets/css/ie8.css" /><![endif]-->
+		<!--[if lte IE 9]><link rel="stylesheet" href="assets/css/ie9.css" /><![endif]-->
+	</head>
+	<body>
+
+    <!-- Header -->
+        <header id="header">
+            <h1><a href="../index.html">Think!</a></h1>
+            <a href="../index.html">Back</a>
+        </header>
+
+        <!-- Blog -->
+        <section id="main" class="wrapper">
+            <div class="container">
+
+                <header class="major special">
+                    <h2>Load Balancing with SSL offloading - nginx + HAProxy</h2>
+                    <span class="image"><img src="../images/haproxy.jpg" alt="" /></span>
+
+                </header>
+                <div>
+					<p>HAProxy and nginx can be configured together to work as an SSL offloader and a load balancer.
+						Listed below are the steps to achieve the same on a centOS instance.</p>
+					<p>Assume <code>192.168.1.1</code> and <code>192.168.1.2</code> running web servers on port <code>80</code> and <code>192.168.1.3</code> running haproxy on port <code>8181</code>.</p>
+					<h4>Configuring <a href="http://www.haproxy.org/" target="_blank">HAPROXY</a></h4>
+					<ol>
+						<li>Install HAProxy. <pre><code>yum install -y haproxy</code></pre></li>
+						<li>Edit the haproxy configuration to update the backend web servers and keep it at the basic log level. <pre><code>
+global
+	log 127.0.0.1   local2
+	chroot          /var/lib/haproxy
+	pidfile         /var/run/haproxy.pid
+	maxconn         4096
+	user            haproxy
+	group           haproxy
+	daemon
+
+defaults
+	mode            http
+	log             global
+	option          httplog
+	option          dontlognull
+	option          http-server-close
+	option          forwardfor except 127.0.0.0/8
+	option          redispatch
+	retries         3
+	timeout         http-request    20s
+	timeout         queue           1m
+	timeout         connect         10s
+	timeout         client          1m
+	timeout         server          1m
+	timeout         http-keep-alive 30s
+	timeout         check           10s
+	maxconn         3000
+
+frontend fe_http
+	option          forwardfor except 127.0.0.1
+	option          httpclose
+	bind            *:8181
+	default_backend be_http
+
+backend  be_http
+	balance         roundrobin
+	option          httpchk
+	server          ws_1 192.168.1.1:80 check port 80
+	server          ws_2 192.168.1.2:80 check port 80</code></pre></li>
+						<li>HAProxy doesn't start logging on installation, it uses syslog for the same. To enable logging install rsyslog and add a config for HAProxy
+							<pre><code>yum install -y rsyslog</code></pre>
+						</li>
+						<li>Create a config file for haproxy logging <code>/etc/rsyslog.d/haproxy.conf</code>
+						<pre><code>$ModLoad imudp
+$UDPServerRun 514
+$template Haproxy,"%msg%\n"
+local2.info -/var/log/haproxy.log;Haproxy
+local2.notice -/var/log/haproxy.admin;Haproxy
+# don't log anywhere else
+local2.* ~</code></pre></li>
+						<li> Edit <code>/etc/sysconfig/rsyslog</code> as below
+							<pre><code>SYSLOGD_OPTIONS="-c 2 -r"</code></pre>
+						</li>
+						<li>Restart <code>rsyslog</code> and <code>haproxy</code> services.
+							That sets up haproxy to bind to <code>8181</code> and check the ports 80 for all the backend web servers that would be load balanced.
+						</li>
+					</ol>
+					<h4>Configuring <a href="https://nginx.org/en/" target="_blank">NGINX</a></h4>
+					<ol>
+						<li>Install nginx.
+							<pre><code>yum install -y nginx</code></pre>
+						</li>
+						<li>Assuming the web servers would bind to default port 80, remove the <code>default.conf</code> in <code>/etc/nginx/conf.d/</code>. Copy the SSL certificate and private key to <code>/etc/nginx/</code>.
+							Make sure to change the owner to <code>nginx:nginx</code> with mode 600 and 644 respectively.
+						</li>
+						<li>
+							Configure the default nginx server as below
+							<pre><code>error_log   /var/log/nginx/ssl_error.log debug;
+access_log  /var/log/nginx/ssl_access.log;
+
+upstream haproxy {
+	server 192.168.1.3:8181;
+}
+
+server {
+	listen 443 ssl;
+	ssl_certificate         server.crt
+	ssl_certificate_key     server_cert.key
+	server_name             domain.com
+	location / {
+		proxy_pass            http://haproxy/;
+		proxy_set_header      X-NginX-Proxy true;
+		proxy_set_header      Host $http_host;
+		proxy_set_header      X-Real-IP  $remote_addr;
+		proxy_set_header      X-Forwarded-For $proxy_add_x_forwarded_for;
+		proxy_set_header      X-Forwarded-Proto https;
+
+		proxy_redirect        default;
+		proxy_redirect        http://$host/ https://$host/;
+		proxy_redirect        http://hostname/ https://$host/;
+		proxy_read_timeout    15s;
+		proxy_connect_timeout 15s;
+	}
+	location ~ /\. { deny  all; }
+}
+
+server {
+	listen    80;
+	return    301 https://$host$request_uri;
+}</code></pre>
+						</li>
+						<li>Restart the nginx and haproxy services.</li>
+					</ol>
+					<p>Any help regarding haproxy can be found <a href="http://haproxy.1wt.eu/download/1.3/doc/configuration.txt" target="_blank">here</a>.</p>
+				</div>
+            </div>
+        </section>
+
+		<!-- Footer -->
+			<footer id="footer">
+				<div class="inner"></div>
+			</footer>
+
+		<!-- Scripts -->
+			<script src="../assets/js/jquery.min.js"></script>
+			<script src="../assets/js/skel.min.js"></script>
+			<script src="../assets/js/util.js"></script>
+			<!--[if lte IE 8]><script src="../assets/js/ie/respond.min.js"></script><![endif]-->
+			<script src="../assets/js/main.js"></script>
+	</body>
+</html>

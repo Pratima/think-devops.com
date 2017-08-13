@@ -1,0 +1,140 @@
+<!DOCTYPE HTML>
+<html>
+	<head>
+		<title>VARNISH - SSL and Basic Auth</title>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<!--[if lte IE 8]><script src="assets/js/ie/html5shiv.js"></script><![endif]-->
+		<link rel="stylesheet" href="../assets/css/main.css" />
+		<!--[if lte IE 8]><link rel="stylesheet" href="assets/css/ie8.css" /><![endif]-->
+		<!--[if lte IE 9]><link rel="stylesheet" href="assets/css/ie9.css" /><![endif]-->
+	</head>
+	<body>
+
+    <!-- Header -->
+        <header id="header">
+            <h1><a href="../index.html">Think!</a></h1>
+            <a href="../index.html">Back</a>
+        </header>
+
+    <!-- Nav -->
+        <nav id="nav">
+            <ul class="links">
+                <li><a href="../index.html">Home</a></li>
+                <li><a href="../elements.html">Elements</a></li>
+            </ul>
+        </nav>
+
+        <!-- Blog -->
+        <section id="main" class="wrapper">
+            <div class="container">
+
+                <header class="major special">
+                    <h2>Varnish - SSL REDIRECTION AND BASIC AUTH</h2>
+                </header>
+                <div>
+                    <span class="image left"><img src="../images/varnish-cache.jpg" alt="" /></span>
+                    <p>Varnish has proven itself to be quite brilliant and blindingly fast when it comes to caching.
+                        Quite recently I was in a situation where varnish was used as a frontend with nginx serving out a webapp and node serving out API services.
+                        The requirements for varnish were to honour cache headers churned out by the application, redirect all incoming requests to https and have basic auth in place.</p>
+                </div>
+                <div>
+                    <p>Now varnish doesn't redirect SSL out of the box nor does it have a straight forward way of putting basic auth in place.
+                        In order to handle SSL redirection, this is the most promising solution I've found.
+                        The solution involves using the vcl_error module to detect a request via the vcl_recv module and perform a redirection with
+                        the proper HTTP code.</p>
+                </div>
+                <div>
+                    <div>
+                        <h4>Address SSL Redirection</h4>
+                        In the vcl_recv segment, right at the beginning put the following condition
+                        <pre><code>sub vcl_recv {
+    # SSL redirection
+    if ( req.http.host ~ "^(?i)(www\.)?.*(\.&lt;domain&gt;)" && req.http.X-Forwarded-Proto !~ "(?i)https" ) {
+        set req.http.x-Redir-Url = "https://" + req.http.host + req.url;
+        error 750 req.http.x-Redir-Url;
+    }
+    ...
+    return (lookup);
+}</code></pre>
+                    </div>
+
+                    <div>In the vcl_error segment, define the error and operation
+                    <pre><code>sub vcl_error {
+    if (obj.status == 750) {
+        set obj.http.Location = obj.response;
+        set obj.status = 302;
+    }
+    ...
+    return (deliver);
+}</code></pre>
+                    </div>
+
+                    <p>This means any request coming for <code>http://www.&lt;domain&gt;</code> or <code>http://&lt;domain&gt;</code> would be captured under error code 750
+                        and as a part of error handling redirected to the SSL listener with HTTP status 302.
+                        Much detailed examples of redirection can be found at <a href="https://www.varnish-cache.org/trac/wiki/VCLExampleRedirectInVCL" target="_blank">Redirect In VCL</a></p>
+
+                    <div>
+
+                        <h4>address Basic Auth</h4>
+
+                        <h4>Scenario 1: All incoming requests should pass through Basic Auth.</h4>
+                        <p>Generate Base64 Basic Auth via command line.
+                            <pre><code>$ echo -n "user:password" | base64</code></pre>
+                        </p>
+                        In the vcl_recv, after the SSL redirection include the following logic
+<pre><code>sub vcl_recv {
+    if ( req.http.Authorization !~ "Basic dXNlcjpwYXNzd29yZA==" #user:password
+    ) {
+        error 401 "Restricted";
+    }
+    ...
+    return (lookup);
+}
+</pre></code>
+
+                        <h4>Scenario 2: All incoming requests except a defined ACL should pass through Basic Auth.</h4>
+
+                        <div>At the beginning of the vcl define an ACL with the host IPs allowed without basic auth.
+<pre><code>acl localhost {
+    "localhost";
+    "127.0.0.1";
+}</pre></code></div>
+                        <div>Modify the vcl_recv as below
+<pre><code>sub vcl_recv {
+    if ( client.ip !~ localhost && req.http.Authorization !~ "Basic dXNlcjpwYXNzd29yZA==" #user:password
+    ) {
+        error 401 "Restricted";
+    }
+    ...
+    return (lookup);
+}</pre></code></div>
+
+                        <div><h4>Scenario 3: All incoming requests except for a few specific requests should pass through Basic Auth.</h4>
+                            Modify the vcl_recv as below
+
+<pre><code>sub vcl_recv {
+    if ( req.url !~ "/version" && req.http.Authorization !~ "Basic dXNlcjpwYXNzd29yZA==" #user:password
+    ) {
+        error 401 "Restricted";
+    }
+    ...
+    return (lookup);
+}</pre></code></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+        <!-- Footer -->
+			<footer id="footer">
+				<div class="inner"></div>
+			</footer>
+
+		<!-- Scripts -->
+			<script src="../assets/js/jquery.min.js"></script>
+			<script src="../assets/js/skel.min.js"></script>
+			<script src="../assets/js/util.js"></script>
+			<!--[if lte IE 8]><script src="../assets/js/ie/respond.min.js"></script><![endif]-->
+			<script src="../assets/js/main.js"></script>
+	</body>
+</html>

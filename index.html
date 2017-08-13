@@ -1,0 +1,162 @@
+<!DOCTYPE HTML>
+<html>
+	<head>
+		<title>Think DevOps</title>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<!--[if lte IE 8]><script src="assets/js/ie/html5shiv.js"></script><![endif]-->
+		<link rel="stylesheet" href="assets/css/main.css" />
+		<!--[if lte IE 8]><link rel="stylesheet" href="assets/css/ie8.css" /><![endif]-->
+		<!--[if lte IE 9]><link rel="stylesheet" href="assets/css/ie9.css" /><![endif]-->
+	</head>
+	<body class="landing">
+
+		<!-- Header -->
+			<header id="header" class="alt">
+				<h1><a href="index.html">Think!</a></h1>
+			</header>
+
+		<!-- Nav -->
+			<nav id="nav">
+				<ul class="links">
+					<li><a href="index.html">Home</a></li>
+					<li><a href="elements.html">Elements</a></li>
+				</ul>
+			</nav>
+
+		<!-- Banner -->
+			<section id="banner">
+				<i class="icon fa-anchor"></i>
+				<h2>Think DevOps</h2>
+				<p>My learnings across the DevOps Practice.</p>
+			</section>
+
+		<!-- One -->
+			<section id="one" class="wrapper style1">
+				<div class="inner">
+					<article class="feature left">
+						<span class="image"><img src="images/disaster-scrabble.jpg" alt="" /></span>
+						<div class="content">
+							<h2>Disaster Recovery - The Automated Way</h2>
+							<p>What if there was a way to keep an active DR running where failure of a primary site would seamlessly transfer the traffic to the secondary site.
+								A few tips and tricks that can be used to setup a warm DR for an application hosted on AWS.</p>
+							<ul class="actions">
+								<li>
+									<a href="blogs/to-dr-or-not-to-dr.html" class="button alt">More</a>
+								</li>
+							</ul>
+						</div>
+					</article>
+					<article class="feature right">
+						<span class="image"><img src="images/mother.jpg" alt="" /></span>
+						<div class="content">
+							<h2>Enterprise Architecture</h2>
+							<p>Motherhood, really, is about following the principles of enterprise architecture in your day to day life! (Well not all of it but a part of it anyway).
+                        And I can say from my experiences that a lot of it now makes more sense to me than it ever did.</p>
+							<ul class="actions">
+								<li>
+									<a href="blogs/enterprise-architecture.html" class="button alt">More</a>
+								</li>
+							</ul>
+						</div>
+					</article>
+					<article class="feature left">
+						<span class="image"><img src="images/varnish.png" alt="" /></span>
+						<div class="content">
+							<h2>SSL Redirection and Basic Auth in Varnish</h2>
+							<p>Varnish has proven itself to be quite brilliant and blindingly fast when it comes to caching.
+								This blog provides a decent solution where varnish can be used to honour cache headers churned out by the application,
+								redirect all incoming requests to https and have basic auth in place.</p>
+							<ul class="actions">
+								<li>
+									<a href="blogs/varnish-ssl-redirection.html" class="button alt">More</a>
+								</li>
+							</ul>
+						</div>
+					</article>
+					<article class="feature right">
+						<span class="image"><img src="images/aws.png" alt="" /></span>
+						<div class="content">
+							<h2>AWS AMI - Instance store to EBS backed conversion</h2>
+							<p>Often we find many useful AMIs as being instance store type. However, for the sake of maintaining state and backups its often best practice to use EBS backed AMIs.
+								This write up gives a details description of how to convert an instance store AMI to EBS backed.
+							</p>
+							<ul class="actions">
+								<li>
+									<a href="blogs/ami-conversion.html" class="button alt">More</a>
+								</li>
+							</ul>
+						</div>
+					</article>
+					<article class="feature left">
+						<span class="image"><img src="images/load-balancing.jpg" alt="" /></span>
+						<div class="content">
+							<h2>Load Balancing with SSL offloading - nginx + HAProxy</h2>
+							<p>For simplest cases of load balancing, engineers rely on AWS ELBs/ALBs, F5s etc.
+								But sometimes load balancing needs require a bit more engineering precision.
+								The most robust self-managed load balancer configuration has been a mix of HAProxy and a web server, nginx in this case.
+							</p>
+							<ul class="actions">
+								<li>
+									<a href="blogs/load-balancing-nginx-haproxy.html" class="button alt">More</a>
+								</li>
+							</ul>
+						</div>
+					</article>
+					<article class="feature right">
+						<span class="image"><img src="images/301.png" alt="" /></span>
+						<div class="content">
+							<h2>Nginx - Redirect vs Rewrite</h2>
+							<p>More often than not there are times when the initial thought process around a product changes mid way through development
+								and one might need to change the application URL. Read more to find out which method would be best suited for such a use case.
+							</p>
+							<ul class="actions">
+								<li>
+									<a href="blogs/nginx-rewrite-redirect.html" class="button alt">More</a>
+								</li>
+							</ul>
+						</div>
+					</article>
+					<article class="feature left">
+						<span class="image"><img src="images/aws-cfn.png" alt="" /></span>
+						<div class="content">
+							<h2>Blue/Green Deployments with AWS Cloudformation</h2>
+							<p>Often in a DevOps oriented organisation, we come across terms like <b>zero-downtime</b> or <b>blue/green</b> deployments.
+								The reasoning behind either is the same - <b>no customer imapct during deployments</b>. This blog articulates a possible way
+								of performing blue green deployments while using AWS cloudformation.</p>
+							<ul class="actions">
+								<li>
+									<a href="blogs/blue-green-deployments.html" class="button alt">More</a>
+								</li>
+							</ul>
+						</div>
+					</article>
+					<article class="feature right">
+						<span class="image"><img src="images/backup-restore.png" alt="" /></span>
+						<div class="content">
+							<h2>MongoDB Backup and Restore using Knife Plugins</h2>
+							<p>TODO</p>
+							<ul class="actions">
+								<li>
+									<a href="blogs/mongodb-backup-restore.html" class="button alt">More</a>
+								</li>
+							</ul>
+						</div>
+					</article>
+				</div>
+			</section>
+
+		<!-- Footer -->
+			<footer id="footer">
+				<div class="inner"></div>
+			</footer>
+
+		<!-- Scripts -->
+			<script src="assets/js/jquery.min.js"></script>
+			<script src="assets/js/skel.min.js"></script>
+			<script src="assets/js/util.js"></script>
+			<!--[if lte IE 8]><script src="assets/js/ie/respond.min.js"></script><![endif]-->
+			<script src="assets/js/main.js"></script>
+
+	</body>
+</html>

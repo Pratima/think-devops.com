@@ -1,0 +1,78 @@
+<!DOCTYPE HTML>
+<html>
+	<head>
+		<title>AWS Cloudformation - Blue/Green Deployments</title>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<!--[if lte IE 8]><script src="assets/js/ie/html5shiv.js"></script><![endif]-->
+		<link rel="stylesheet" href="../assets/css/main.css" />
+		<!--[if lte IE 8]><link rel="stylesheet" href="assets/css/ie8.css" /><![endif]-->
+		<!--[if lte IE 9]><link rel="stylesheet" href="assets/css/ie9.css" /><![endif]-->
+	</head>
+	<body>
+
+    <!-- Header -->
+        <header id="header">
+            <h1><a href="../index.html">Think!</a></h1>
+            <a href="../index.html">Back</a>
+        </header>
+
+        <!-- Blog -->
+        <section id="main" class="wrapper">
+            <div class="container">
+                <header class="major special">
+                    <h2>Blue/Green Deployments with AWs Cloudformation</h2>
+                    <span class="image"><img src="../images/blue-green-deployments.png" alt="" /></span>
+                </header>
+                <div>
+                    <p>AWS provide a wide range of high end and mature services which, when used in combination with each other could provide an enterprise a highly available,
+                        scalable and resilient infrastructure solution. Having said that, there doesn't seem to be a decent solution out there to implement blue/green deployments using
+                        AWS Cloudformation.</p>
+                    <p>Here are a few things to keep in mind while implementing blue/green deployments with AWS Cloudformation.</p>
+                    <ul>
+                        <li>Try to split the cloudformation templates into smaller templates that are task based - ie vpc, network-security, web, api, microservice etc.</li>
+                        <li>Blue/Green deployments would create new resources with each deployment,
+                            it would be worth increasing autoscaling/launch configuration/stack limits to a higher, appropriate number.</li>
+                    </ul>
+                    <p>
+                        Another bit and possibly the most important bit is how to make the resources in the new stack <b>unique</b>.
+                        <ul>
+                            <li>Consider any change to the current running code and/or config as a deployment.</li>
+                            <li>Also have the cloudformation templates version-ed, so any change would mean an infrastructure level change thus requiring a deployment irrespective of code/config change.</li>
+                            <li>The last variable component was the application AMI, configured for the autoscaling group/instances. The AMI ID would change in case Amazon rolls out a new version.</li>
+                        </ul>
+                        The trick is to consider the above four components and create a unique stack each time any one or more of these change. </p>
+                    <p>Solution -> <b>Use Git (SHAs)</b>!
+                    </p>
+                    <p>Create the stack name as <b>&lt;application&gt;-&lt;code-scm-revision&gt;-&lt;config-scm-revision&gt;-&lt;ami-id&gt;-&lt;template-scm-revision&gt;</b>.
+                        The same cloudformation template would now create a new stack each time any one or more of the four components change since the stack-name changes with them.
+                        In the case of stack resources, they have to have unique names as well otherwise the template would modify any existing resources with the same name and type.
+                        Well, one would think since we have already figured out a way to keep the stack name unique, we just use the stack-name to as a prefix or suffix to the resource names.</p>
+                    <p>Agreed.</p>
+                    <p>Sadly, some resources like ELBs don't support names more than 32 characters. So now the question arises around correct resource naming,
+                        yet maintaining the stack name since it'll be easier for anyone looking at the stack to identify the component versions? </p>
+                    <p>Solution -> <b>SHASUM</b>!</p>
+                    <p>Let's add a new parameter to the cloudformation template -> UniqueID, which is basically a shasum of the stackname. This UniqueID can be prefixed to the application name: <b>&lt;application&gt;-&lt;shasum{stack-name}&gt;</b>.</p>
+                    <p>Using the first 7 or 8 chars of the shasum ensures the unique id would never be longer than say 20 characters, unless there is an atrocious application name in which needs to be re-thought.
+                        UniqueID parameter should be used as a prefix for all resource names.</p>
+                    <p>Once the Blue (Next-To-Go) Stack is set up, smoke tests can be run to validate the deployment and DNS switch can be performed once the smokes turn green,
+                        to make the code available to the end user. In order to make this zero downtime even as far as DNS resolution goes, make sure to use weighted DNS.
+                    </p>
+                    <p>As a step towards cost saving, don't forget to add a clean up task - automated or manual to delete old/decommissioned stacks.</p>
+                </div>
+            </div>
+        </section>
+
+		<!-- Footer -->
+			<footer id="footer">
+				<div class="inner"></div>
+			</footer>
+
+		<!-- Scripts -->
+			<script src="../assets/js/jquery.min.js"></script>
+			<script src="../assets/js/skel.min.js"></script>
+			<script src="../assets/js/util.js"></script>
+			<!--[if lte IE 8]><script src="../assets/js/ie/respond.min.js"></script><![endif]-->
+			<script src="../assets/js/main.js"></script>
+	</body>
+</html>

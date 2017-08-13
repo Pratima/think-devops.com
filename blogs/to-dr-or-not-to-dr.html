@@ -1,0 +1,87 @@
+<!DOCTYPE HTML>
+<html>
+	<head>
+		<title>Disaster Recovery</title>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<!--[if lte IE 8]><script src="assets/js/ie/html5shiv.js"></script><![endif]-->
+		<link rel="stylesheet" href="../assets/css/main.css" />
+		<!--[if lte IE 8]><link rel="stylesheet" href="assets/css/ie8.css" /><![endif]-->
+		<!--[if lte IE 9]><link rel="stylesheet" href="assets/css/ie9.css" /><![endif]-->
+	</head>
+	<body>
+
+    <!-- Header -->
+        <header id="header">
+            <h1><a href="../index.html">Think!</a></h1>
+            <a href="../index.html">Back</a>
+        </header>
+
+    <!-- Nav -->
+        <nav id="nav">
+            <ul class="links">
+                <li><a href="../index.html">Home</a></li>
+                <li><a href="../elements.html">Elements</a></li>
+            </ul>
+        </nav>
+
+        <!-- Blog -->
+        <section id="main" class="wrapper">
+            <div class="container">
+
+                <header class="major special">
+                    <h2>To DR or not to DR</h2>
+                </header>
+                <div>
+                    <span class="image left"><img src="../images/disaster.jpg" alt="" /></span><p>Most organizations these days look at strategies and ways of implementing a "working" DR solution. Often a DR plan of action is a manual process based on multiple approvals at each level from Incident Management Teams to Product Ownership teams.
+
+                    <p>What if there was a way to keep an active DR running where failure of a primary site would seamlessly transfer the traffic to the secondary site. In fact if the DR is active or warm then the only manual bit would be disabling the primary site via DNS.</p>
+                </div>
+
+                <div>
+                    <p>A few tips and tricks that would help in a simple implementation of a <b>warm DR for a stateless application hosted on AWS.</b></p>
+
+                    <b>AMI</b>
+                    <ul style="text-align: left;">
+                        <li>Make sure that the AMIs are built across both the primary and secondary region.</li>
+                        <li>The fastest way to build multi-region AMIs would be to use different builds for each region using the same configuration management code altering the "REGION" parameter each time. This would make the AMIs consistent and available in each region.</li>
+                    </ul>
+                    <b>PACKAGE REPOSITORY</b>
+                    <ul style="text-align: left;">
+                        <li>The application packages/RPMs should be available and ready to be used across both the regions.</li>
+                        <li>If the packages are hosted in private S3 buckets then the application packages need to be uploaded to the S3 buckets in each region.</li>
+                    </ul>
+                    <b>DEPLOYMENT</b>
+                    <ul style="text-align: left;">
+                        <li>As a part of deployment, the application deployment code should take REGION as one of the parameters.</li>
+                        <li>Each region should be deployed to during the scheduled deployment. A deployment would be successful only if both regions are successfully deployed to.</li>
+                    </ul>
+                    <b>DNS</b>
+                    <ul style="text-align: left;">
+                        <li>The best way to implement DNS in this case would be <i>weighted.</i></li>
+                        <li>Equal weights should be applied for both the site, ideally. But this could be left to the discretion of the business owners.</li>
+                        <li>Each DNS entry should have a health check which would dictate whether the site is healthy for traffic or not. This would allow traffic to be shifted across sites automatically based on the health check.</li>
+                        <li>If health checks aren't configured then the DNS switch would be a manual process.</li>
+                    </ul>
+                    <b>DATABASE REPLICATION</b>
+                    <ul style="text-align: left;">
+                        <li>Last but not the least, keeping the databases replicated would be the most important step in the DR strategy.</li>
+                        <li>MySQL databases are easier to replicate as AWS provides auto-replication for MySQL. This makes it easier to create an active DR.</li>
+                        <li>PostgreSQL is tricky business. Since AWS does not provide auto replication for PostgreSQL DBs, the replication would need to be manual in an event of DR. This needs to be a two way process. First between the primary and secondary sites to update the secondary site and when the primary site comes back up, to update the primary site.</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+        <!-- Footer -->
+			<footer id="footer">
+				<div class="inner"></div>
+			</footer>
+
+		<!-- Scripts -->
+			<script src="../assets/js/jquery.min.js"></script>
+			<script src="../assets/js/skel.min.js"></script>
+			<script src="../assets/js/util.js"></script>
+			<!--[if lte IE 8]><script src="../assets/js/ie/respond.min.js"></script><![endif]-->
+			<script src="../assets/js/main.js"></script>
+	</body>
+</html>

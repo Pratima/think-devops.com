@@ -1,0 +1,76 @@
+<!DOCTYPE HTML>
+<html>
+	<head>
+		<title>AWS AMI Conversion</title>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<!--[if lte IE 8]><script src="assets/js/ie/html5shiv.js"></script><![endif]-->
+		<link rel="stylesheet" href="../assets/css/main.css" />
+		<!--[if lte IE 8]><link rel="stylesheet" href="assets/css/ie8.css" /><![endif]-->
+		<!--[if lte IE 9]><link rel="stylesheet" href="assets/css/ie9.css" /><![endif]-->
+	</head>
+	<body>
+
+    <!-- Header -->
+        <header id="header">
+            <h1><a href="../index.html">Think!</a></h1>
+            <a href="../index.html">Back</a>
+        </header>
+
+        <!-- Blog -->
+        <section id="main" class="wrapper">
+            <div class="container">
+
+                <header class="major special">
+                    <h2>How to convert Instance store AMI to EBS-backed AMI</h2>
+                    <span class="image"><img src="../images/backing-up-amazon-ec2-with-amazon-ebs-snapshots.jpg" alt="" /></span>
+
+                </header>
+                <div>
+                    <ol>
+                        <li>Launch an instance from an instance store-backed AMI.</li>
+                        <li>Make a note of the ramdisk ID and kernel ID, the running instance is using</li>
+                        <li>Create a 10GiB Amazon EBS volume in the same Availability Zone as that of the newly-launched instance e.g. <code>/dev/sdf</code></li>
+                        <li>Attach the volume to the running instance using either the AWS Management Console or the command line interface.</li>
+                        <li>Make sure all services are turned off like mysqld, nginx etc.</li>
+                        <li>Format the volume with a file system. Newer kernels use <code>/dev/xvdf</code> convention</li>
+                        <pre><code>mkfs.ext3 /dev/xvdf</pre></code>
+                        <li>Create a directory <code>/mnt/ebs</code> and mount the volume on it.</li>
+                        <pre><code>mkdir /mnt/ebs
+mount /dev/xvdf /mnt/ebs</pre></code>
+                        <li>Copy the data on the root storage device to the newly-attached volume.</li>
+                        <pre><code>rsync -avx --exclude /mnt/ebs / /mnt/ebs</pre></code>
+                        [SPECIFIC TO UBUNTU]
+                        <li>Edit <code>/mnt/ebs/etc/fstab</code>, <code>/mnt/ebs/boot/grub/menu.lst</code> and <code>/mnt/ebs/boot/grub/grub.cfg</code> and replace uses of <code>LABEL=cloudimg-rootfs</code> with <code>/dev/xvda1</code></li>
+                        <li>Remove <code>/dev/xvda2</code> and <code>/dev/xvda3</code> specific instructions from <code>/mnt/ebs/etc/fstab</code></li>
+                        [SPECIFIC TO CENTOS]
+                        <li>Edit <code>/mnt/ebs/etc/fstab</code>, <code>/mnt/ebs/boot/grub/menu.lst</code> and replace uses of <code>LABEL=/</code> with <code>/dev/xvde1</code>.</li>
+                        <li>Remove <code>/dev/xvde2</code> and <code>/dev/xvde3</code> specific instructions from <code>/mnt/ebs/etc/fstab</code></li>
+                        <li>Create the following devices within the <code>/mnt/ebs</code></li>
+                        <pre><code>MAKEDEV console
+MAKEDEV generic
+MAKEDEV zero
+MAKEDEV null</pre></code>
+                        <li>Detach the volume from the instance.</li>
+                        <li>Create a snapshot of the volume.</li>
+                        <li>Register the snapshot of the volume as an AMI.
+                            While registering make sure the architecture correctly configured and the Kernel ID and Ramdisk ID should match the one taken a note of in <b>Step 2</b>.
+                            If the Ramdisk ID information is not available form the instance then leave it to Use Default.</li>
+                    </ol>
+                </div>
+            </div>
+        </section>
+
+		<!-- Footer -->
+			<footer id="footer">
+				<div class="inner"></div>
+			</footer>
+
+		<!-- Scripts -->
+			<script src="../assets/js/jquery.min.js"></script>
+			<script src="../assets/js/skel.min.js"></script>
+			<script src="../assets/js/util.js"></script>
+			<!--[if lte IE 8]><script src="../assets/js/ie/respond.min.js"></script><![endif]-->
+			<script src="../assets/js/main.js"></script>
+	</body>
+</html>

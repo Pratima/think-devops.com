@@ -1,0 +1,81 @@
+<!DOCTYPE HTML>
+<html>
+	<head>
+		<title>nginx Rewrite & Redirect</title>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<!--[if lte IE 8]><script src="assets/js/ie/html5shiv.js"></script><![endif]-->
+		<link rel="stylesheet" href="../assets/css/main.css" />
+		<!--[if lte IE 8]><link rel="stylesheet" href="assets/css/ie8.css" /><![endif]-->
+		<!--[if lte IE 9]><link rel="stylesheet" href="assets/css/ie9.css" /><![endif]-->
+	</head>
+	<body>
+
+    <!-- Header -->
+        <header id="header">
+            <h1><a href="../index.html">Think!</a></h1>
+            <a href="../index.html">Back</a>
+        </header>
+
+        <!-- Blog -->
+        <section id="main" class="wrapper">
+            <div class="container">
+
+                <header class="major special">
+                    <h2>Nginx - Rewrite vs redirect</h2>
+                </header>
+                <div>
+                    <span class="image left"><img src="../images/Nginx-logo.png" alt="" /></span>
+                    <p>More often than not there are times when the initial thought process around a product changes mid way through development
+                        and one might need to change the application URL. There are two ways of implementing this change in nginx.</p>
+                        <pre><code>## Redirect from non-www to www
+server {
+    server_name example.com;
+    # Option 1
+    return 301 $scheme://$host$request_uri;
+    # Option 2
+    rewrite ^ http://$host$request_uri? permanent;
+}
+
+## Redirect from http to https
+server {
+    server_name example.com;
+    # Option 1
+    return 301 https://$server_name$request_uri;
+    # Option 2
+    rewrite ^ https://$server_name$request_uri? permanent;
+}</code></pre>
+
+                        <ul>
+                            <b>REWRITE</b>
+                            <li>Only the part of the original url that matches the regex is rewritten.</li>
+                            <li>Slower than a Return.</li>
+                            <li>Returns HTTP 302 (Moved Temporarily) in all cases, irrespective of permanent.</li>
+                            <li>Suitable for temporary url changes.</li>
+                        </ul>
+                        <ul>
+                            <b>RETURN</b>
+                            <li>The entire url is rewritten to the url specified.</li>
+                            <li>Faster response than rewrite.</li>
+                            <li>Returns HTTP 301 (Moved Permanently).</li>
+                            <li>Suitable for permanent changes to the url.</li>
+                            <li>No need to set permanent.</li>
+                        </ul>
+                        <p>More details on nginx can be found <a href="http://www.aosabook.org/en/nginx.html" target="_blank">here</a></p>
+                </div>
+            </div>
+        </section>
+
+		<!-- Footer -->
+			<footer id="footer">
+				<div class="inner"></div>
+			</footer>
+
+		<!-- Scripts -->
+			<script src="../assets/js/jquery.min.js"></script>
+			<script src="../assets/js/skel.min.js"></script>
+			<script src="../assets/js/util.js"></script>
+			<!--[if lte IE 8]><script src="../assets/js/ie/respond.min.js"></script><![endif]-->
+			<script src="../assets/js/main.js"></script>
+	</body>
+</html>
