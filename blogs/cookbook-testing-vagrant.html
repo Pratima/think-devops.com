@@ -1,0 +1,113 @@
+<!DOCTYPE HTML>
+<html>
+	<head>
+		<title>Cookbook Testing</title>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<!--[if lte IE 8]><script src="assets/js/ie/html5shiv.js"></script><![endif]-->
+		<link rel="stylesheet" href="../assets/css/main.css" />
+		<!--[if lte IE 8]><link rel="stylesheet" href="assets/css/ie8.css" /><![endif]-->
+		<!--[if lte IE 9]><link rel="stylesheet" href="assets/css/ie9.css" /><![endif]-->
+	</head>
+	<body>
+
+    <!-- Header -->
+        <header id="header">
+            <h1><a href="../index.html">Think!</a></h1>
+            <a href="../index.html">Back</a>
+        </header>
+
+    <!-- Nav -->
+        <nav id="nav">
+            <ul class="links">
+                <li><a href="../index.html">Home</a></li>
+
+            </ul>
+        </nav>
+
+        <!-- Blog -->
+        <section id="main" class="wrapper">
+            <div class="container">
+
+                <header class="major special">
+                    <h2>Chef Cookbook Testing using Vagrant</h2>
+                </header>
+                <div>
+                    <span class="image left"><img src="../images/oc-whippingup-sticker.png" alt="" /></span>
+                    <p>There came a time in our team where we started churning out cookbooks by the hour. Now the question that needed to be answered was -
+                        How does one QA a chef cookbook. We could either have had one team member solely responsible for writing out rspecs and testing the cookbooks on a virtual environment,
+                        but what happens when the only team members who can be used to perform the above task as busy creating the cookbooks themselves. We needed a faster and smoother answer. In came Vagrant.</p>
+                    <p>Why Vagrant?
+                        <p><i><b>Vagrant does everything that one would need to do to set up a virtual environment without wasting time in installations, snapshots, teardowns etc.
+                            Vagrant doesn’t create a virtual machine instance completely from scratch. Instead, it imports a base image (read .box files) for a VM and builds off of that.
+                            This simplifies things greatly for Vagrant users since they don’t have to spend time specifying tedious details such as memory capacity, hard disk capacity,
+                            network controllers, etc, and also allows customize-able bases to build projects from. Vagrant will isolate dependencies and their configuration within a single disposable,
+                            consistent environment, without sacrificing any of the tools you are used to working with (editors, browsers, debuggers, etc.).</b></i> <a href="https://www.vagrantup.com/intro/index.html">Read More</a>.</p>
+                        <p>Vagrant gives us one file "Vagrantfile" that needs to be configured with the environment that needs to be set and voila! everything works like you want it to. The standard (read easiest) way to use vagrant is as below.</p>
+                        <ol>
+                            <li>Create a directory where you want to store all your vagrant data, say vagrant. Then download the boxes that you need in your test environment. The box packages are available at <a href="http://www.vagrantbox.es/">vagrantbox.es</a>.</li>
+                            <li>Run the <code>vagrant init</code> command in the vagrant directory. This command would create the Vagrantfile. The file by default sets up a single VM environment.</li>
+                            <li>Add a box, depending on the flavour that the cookbooks need to be tested for.
+                                <pre><code>vagrant box add centos64 https://github.com/2creatives/vagrant-centos/releases/download/v6.4.2/centos64-x86_64-20140116.box</code></pre></li>
+                            <li>
+                                Consider a production system running different version of CentOS for different microservices. In order to set up a testing environment that would test cookbooks on all images of the production set-up.
+                                Customize the Vagrantfile as below:
+                                <pre><code>test_vms = {
+    :centos56 => {
+        :hostname => "centos56",
+        :ipaddress => "x.x.x.x",
+        :run_list => "recipe[cookbook_1],recipe[cookbook_2]"
+    },
+    :centos58 => {
+        :hostname => "centos58",
+        :ipaddress => "x.x.x.x",
+        :run_list => "recipe[cookbook_1],recipe[cookbook_2]"
+    },
+    :centos6 => {
+        :hostname => "centos64",
+        :ipaddress => "x.x.x.x",
+        :run_list => "recipe[cookbook_1],recipe[cookbook_2]"
+    }
+}
+Vagrant::Config.run do |global_config|
+    test_vms.each_pair do |name, setup|
+        global_config.vm.define name do |config|
+            config.vm.share_folder("v-root", "/vagrant", ".", :disabled => true)
+            config.vm.box = name.to_s
+            config.vm.boot_mode = :headless
+            config.vm.host_name = name
+            config.vm.network :bridged, setup[:ipaddress]
+            config.vm.provision :chef_solo do |chef|
+                chef.cookbooks_path = "cookbooks" #path relative to the location of Vagrantfile
+                chef.node_name = name
+                chef.log_level = :info
+                chef.run_list = options[:run_list].split(",").flatten
+            end
+        end
+    end
+end</code></pre></li>
+                            <li>There are two types of adapters that can be used to setup config.vm.network <code>:bridged</code> and <code>:hostonly</code>.
+                                Using <code>:bridged</code> adapter the vms would be able to talk to each other and using <code>:hostonly</code> they would behave as individual vms on separate networks.</li>
+                            <li>Another thing to keep in mind while testing in a self contained cloud environment would be that if there are cookbooks that try to access a web server
+                                / yum repo server / gem server in the same environment then it would be essential that there be a cookbook that stops the iptables and is the first to run in the run_list each time.</li>
+                            <li>Now, just run <code>vagrant up</code> and all the vms would be provisioned as configured in the Vagrantfile. Also remember that that vagrant up would try to recreate the entire environment each time the command is run.
+                                So, say you hit an error in a cookbook you ran. You change the cookbook but you don't want to rebuild the entire environment again, run <code>vagrant provision &lt;vm_name&gt;</code>. This command would only re-provision the mentioned vm.</li>
+                            <li>Coming to teardown. The easiest way to teardown a vagrant environment is by running the command <code>vagrant destroy -f</code> This would force destroy all the vms created by the <code>vagrant up</code> command.</li>
+                        </ol>
+                    </p>
+                </div>
+            </div>
+        </section>
+        <!-- Footer -->
+			<footer id="footer">
+				<div class="inner"></div>
+			</footer>
+
+		<!-- Scripts -->
+			<script src="../assets/js/jquery.min.js"></script>
+			<script src="../assets/js/skel.min.js"></script>
+			<script src="../assets/js/util.js"></script>
+			<!--[if lte IE 8]><script src="../assets/js/ie/respond.min.js"></script><![endif]-->
+			<script src="../assets/js/main.js"></script>
+	</body>
+</html>
