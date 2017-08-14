@@ -3879,8 +3879,8 @@
 		background-color: #1E2832;
 		color: rgba(255, 255, 255, 0.75);
 		background-attachment: fixed;
-		background-image: url("images/overlay.png"), url("../../images/banner1.png");
-		background-size: cover;
+		background-image: url("images/overlay.png"), url("../../images/banner.png");
+		background-size: contain;
 		text-align: center;
 	}
 
