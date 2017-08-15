@@ -2811,10 +2811,35 @@
 		flex-wrap: wrap;
 		margin-bottom: 4em;
 	}
-
 		.image-grid .image {
 			margin: 0;
-			width: 25%;
+			width: 50%;
+		}
+
+		.image-grid-image-container {
+			position:relative;
+			width: 100%;
+		}
+
+		.image-grid .image .image-grid-image-container img {
+			width: 100%;
+			padding: 20px;
+		}
+
+		.image-grid .image .image-grid-image-description {
+			position:absolute;
+			bottom:0;
+			font-size:24px;
+			font-family:"vedana";
+			background:rgba(251,251,251,0.5);
+			padding:10px 20px;
+			width:100%;
+			text-align:center;
+		}
+
+		.image-grid .image .image-grid-image-description a {
+			font-size:16px;
+			color: black;
 		}
 
 			.image-grid .image img {
