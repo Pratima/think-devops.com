@@ -1,0 +1,293 @@
+<!DOCTYPE HTML>
+<html>
+	<head>
+		<title>Serverless Event Driven Dashboards</title>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<!--[if lte IE 8]><script src="assets/js/ie/html5shiv.js"></script><![endif]-->
+		<link rel="stylesheet" href="../assets/css/main.css" />
+		<!--[if lte IE 8]><link rel="stylesheet" href="assets/css/ie8.css" /><![endif]-->
+		<!--[if lte IE 9]><link rel="stylesheet" href="assets/css/ie9.css" /><![endif]-->
+	</head>
+	<body>
+
+    <!-- Header -->
+        <header id="header">
+            <h1><a href="../index.html">Think!</a></h1>
+            <a href="../index.html">Back</a>
+        </header>
+
+    <!-- Nav -->
+        <nav id="nav">
+            <ul class="links">
+                <li><a href="../index.html">Home</a></li>
+
+            </ul>
+        </nav>
+
+    <!-- Blog -->
+        <section id="main" class="wrapper">
+            <div class="container">
+
+                <header class="major special">
+                    <h2>Serverless Event Driven Dashboards</h2>
+                </header>
+                <div>
+                    <span class="image left"><img src="../images/serverless-flow.png" alt="" /></span><p>
+										Serverless has recently become the thing that get everyone excited.
+										So when we were looking at rebuilding a Build Dashboard, serverless was the way to go.</p>
+                </div>
+                <div>
+                    The architecture has five basic components.
+										<li>Build/Deploy Pipeline</li>
+										<li>CloudWatch Events Rule</li>
+										<li>Lambda Function</li>
+										<li>DynamoDB Table</li>
+										<li>API Gateway</li>
+								</div>
+								<p>
+									<div>
+										<b>PIPELINE/STAGES</b>
+										<ul style="text-align: left;">
+										Based on the granularity of visibility into the pipeline, the events coule be per stage or per pipeline execution.
+										The most relavant way to achieve this is to trigger a start event when a stage/pipeline starts. And capture the execution
+										status and publish an event after the stage finishes. This could either be pass or fail.
+											<pre><code>aws events put-events --entries file://startevent.json</code></pre>
+											<strong>Example Event: startevent.json</strong>
+
+<pre><code>{
+  "version": "0",
+  "detail-type": "Pipeline Stage Execution State Change",
+  "source": "Pipeline",
+  "account": "123456789012",
+  "time": "2017-04-22T03:31:47Z",
+  "region": "ap-southeast-1",
+  "resources": [
+    "TestPipeline"
+  ],
+  "detail": {
+    "pipeline": "TestPipeline",
+    "version": "13",
+    "build-id": "01234567-0123-0123-0123-012345678901",
+    "stage": "Build",
+    "state": "STARTED"
+  }
+}</code></pre>
+										</ul>
+									</div>
+								</p>
+                    <b>CLOUDWATCH EVENTS RULE</b>
+                    <ul style="text-align: left;">
+										Once the structure of the event has been finalised, a corresponding CloudWatch Events Rule needs to be configured to capture the event and trigger the lambda.
+										<pre><code>aws events put-rule --name "TriggerPipelinesDashboard" \
+  --event-pattern "{\"source\":[\"Pipeline\"],\"detail-type\":[\"Pipeline Stage Execution State Change\"],\"detail\":{\"state\":[\"STARTED\",\"PASSED\",\"FAILED\"]}}" \
+  --role-arn "arn:aws:iam::123456789012:role/pipelinesDashboardTriggerRole"</code></pre>
+                    </ul>
+                    <b>LAMBDA FUNCTION</b>
+                    <ul style="text-align: left;">
+											The following is a simple lambda function that captures the event details and puts the relavant keys to the DynamoDB table.
+											The <code>DYNAMODB_TABLE_NAME</code> is an environment variable passed to the function.
+											<strong>Function Name: pipelines-dashboard</strong>
+<pre><code>
+import logging
+import boto3
+import os
+
+def lambda_handler(event, context):
+
+    """entry point for lambda function"""
+    logger = logging.getLogger()
+    region = event.get("Region", "ap-southeast-1")
+    event_details = event.get('detail')
+
+    pipeline_name = event_details['pipeline']
+
+    pipeline_latest_execution_status = event_details['state']
+		pipeline_stage = event_details['stage']
+
+    # The data structure keys need to match the dynamodb key
+    pipeline_data = {
+        'PipelineName': pipeline_name,
+        'PipelineStatus': pipeline_latest_execution_status,
+        'PipelineStage': pipeline_stage
+    }
+    print(pipeline_data)
+
+    put_item_in_dynamodb(pipeline_data, region)
+
+def put_item_in_dynamodb(pipeline_data, region):
+
+    dynamodb = boto3.resource('dynamodb', region_name=region)
+    dynamodb_table_name = os.environ['DYNAMODB_TABLE_NAME']
+    table = dynamodb.Table(dynamodb_table_name)
+    table.put_item(
+        Item=pipeline_data
+    )
+
+</code></pre>
+										Also, make sure the cloudwatch events rule has the permission to trigger the lambda function.
+										<pre><code>aws lambda add-permission
+  --function-name 'arn:aws:lambda:ap-southeast-2:123456789012:function:pipelines-dashboard'
+  --statement-id 987654321
+  --action 'lambda:InvokeFunction'
+  --principal 'events.amazonaws.com'
+  --source-arn 'arn:aws:events:ap-southeast-2:123456789012:rule/TriggerPipelinesDashboard'
+										</code></pre>
+										</ul>
+                    <b>DYNAMODB TABLE</b>
+                    <ul style="text-align: left;">
+											A simple DynamoDB Table that needs to be configured for scans.
+											<pre><code>aws dynamodb create-table --table-name pipelines_dashboard_data \
+  --attribute-definitions AttributeName=PipelineName,AttributeType=S \
+  --key-schema AttributeName=PipelineName,KeyType=HASH \
+  --provisioned-throughput ReadCapacityUnits=2,WriteCapacityUnits=2</code></pre>
+										</ul>
+                    <b>API GATEWAY</b>
+                    <ul style="text-align: left;">
+											<p>Configure an API gateway as a proxy for the DynamoDB Table.
+											Although having said that, the API Gateway can be a bit tricky to setup, because of the number and sequence of steps involved.
+											Personally, for me, it was a massive trial, error, repeat process. The good part about that is, the readers of this blog needn't put in that e(rr)ffort.
+											Here are the steps to configure an API Gateway as DynamoDB proxy.</p>
+											<ul><strong>Steps involved in configuring an API Gateway</strong>
+												<li>Configure REST API</li>
+												<li>Configure the API Gateway GET Method</li>
+												<li>Configure an API Gateway Deployment</li>
+												<li>Configure an API Gateway Stage</li>
+											</ul>
+											<p>Sadly the AWS API can get a bit overwhelming to configure the above setup. So we used AWS Cloudformation,
+												which can be really great when resolving dependency in service creation and handling complex infrastructure setup.
+												<ul>The below template does the following
+													<li>Setup a role for the API Gateway to access DynamoDB</li>
+													<li>Create a DynamoDB Table</li>
+													<li>Create an API Gateway configuration to proxy the DynamoDB Table.</li>
+												</ul>
+
+												<code>/data</code> requests ahould now render a json document that is, essentially, a table scan.
+												You can further use any frontend framework to parse the json and render a UI.
+											</p>
+										</ul>
+<pre><code>
+Description: Creates a cloudformation stack to deploy dynamodb table and API Gateway proxy
+AWSTemplateFormatVersion: '2010-09-09'
+
+Resources:
+
+  PipelinesDashboardApiGatewayExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: 'PipelinesDashboardApiGatewayExecutionRole'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Action: ['sts:AssumeRole']
+          Effect: Allow
+          Principal:
+            Service:
+              - apigateway.amazonaws.com
+      Path: /
+      Policies:
+        - PolicyName: 'PipelinesDashboardApiGatewayExecutionRolePolicy'
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Action:
+                - dynamodb:Scan
+                Effect: Allow
+                Resource: '*'
+
+  PipelinesDashboardDynamoDbTable:
+    Type: 'AWS::DynamoDB::Table'
+    Properties:
+      TableName: 'pipelines_dashboard_data'
+      AttributeDefinitions:
+        -
+          AttributeName: 'PipelineName'
+          AttributeType: 'S'
+      KeySchema:
+        -
+          AttributeName: 'PipelineName'
+          KeyType: 'HASH'
+      ProvisionedThroughput:
+        ReadCapacityUnits: '2'
+        WriteCapacityUnits: '2'
+
+  PipelinesDashboardStage:
+    Type: 'AWS::ApiGateway::Stage'
+    Properties:
+      DeploymentId: !Ref 'ApiDeployment'
+      Description: 'API Gateway for Pipelines Dashboard'
+      MethodSettings:
+        - ResourcePath: /
+          HttpMethod: GET
+      RestApiId: !Ref 'DashboardApi'
+      StageName: 'data'
+
+  ApiDeployment:
+    Type: 'AWS::ApiGateway::Deployment'
+    DependsOn: GetPipelinesDetailsMethod
+    Properties:
+      RestApiId: !Ref DashboardApi
+
+  GetPipelinesDetailsMethod:
+    Type: "AWS::ApiGateway::Method"
+    Properties:
+      AuthorizationType: 'NONE'
+      HttpMethod: 'GET'
+      Integration:
+        Type: 'AWS'
+        IntegrationHttpMethod: 'POST'
+        Uri: !Sub 'arn:aws:apigateway:${AWS::Region}:dynamodb:action/Scan'
+        PassthroughBehavior: 'WHEN_NO_TEMPLATES'
+        Credentials: !Sub 'arn:aws:iam::${AWS::AccountId}:role/PipelinesDashboardApiGatewayExecutionRole'
+        IntegrationResponses:
+        -
+          ResponseTemplates:
+            application/json: "#set($inputRoot = $input.path('$'))\n[\n    #foreach($elem\
+              \ in $inputRoot.Items) {\n        \"name\": \"$elem.PipelineName.S\"\
+              ,\n        \"status\": \"$elem.PipelineStatus.S\",\n        \"stage\"\
+              : null\n    }#if($foreach.hasNext),#end\n\
+              \t#end\n\n]"
+          StatusCode: '200'
+        RequestTemplates:
+          application/json: "#set($inputRoot = $input.path('$'))\n{ \"TableName\"\
+            : \"pipelines_dashboard_data\" }"
+      OperationName: 'GetPipelinesData'
+      ResourceId: !GetAtt 'DashboardApi.RootResourceId'
+      RestApiId: !Ref 'DashboardApi'
+      MethodResponses:
+      -
+        StatusCode: '200'
+
+  DashboardApi:
+    Type: 'AWS::ApiGateway::RestApi'
+    Properties:
+      Name: 'PipelinesDashboardApi'
+      Description: 'API used for Pipelines Dashboard requests'
+
+</code></pre>
+
+                </div>
+            </div>
+        </section>
+
+        <!-- Footer -->
+            <footer id="footer">
+                <div class="inner"></div>
+            </footer>
+
+		<!-- Scripts -->
+			<script src="../assets/js/jquery.min.js"></script>
+			<script src="../assets/js/skel.min.js"></script>
+			<script src="../assets/js/util.js"></script>
+			<!--[if lte IE 8]><script src="../assets/js/ie/respond.min.js"></script><![endif]-->
+            <script src="../assets/js/main.js"></script>
+            <script>
+				(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+				(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+				m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+				})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+				ga('create', 'UA-104593082-1', 'auto');
+				ga('send', 'pageview');
+			</script>
+	</body>
+</html>
