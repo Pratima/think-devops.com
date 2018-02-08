@@ -49,8 +49,8 @@
 									<div>
 										<b>PIPELINE/STAGES</b>
 										<ul style="text-align: left;">
-										Based on the granularity of visibility into the pipeline, the events coule be per stage or per pipeline execution.
-										The most relavant way to achieve this is to trigger a start event when a stage/pipeline starts. And capture the execution
+										Based on the granularity of visibility into the pipeline, the events could be per stage or per pipeline execution.
+										The most relevant way to achieve this is to trigger a start event when a stage/pipeline starts. And capture the execution
 										status and publish an event after the stage finishes. This could either be pass or fail.
 											<pre><code>aws events put-events --entries file://startevent.json</code></pre>
 											<strong>Example Event: startevent.json</strong>
@@ -85,7 +85,7 @@
                     </ul>
                     <b>LAMBDA FUNCTION</b>
                     <ul style="text-align: left;">
-											The following is a simple lambda function that captures the event details and puts the relavant keys to the DynamoDB table.
+											The following is a simple lambda function that captures the event details and puts the relevant keys to the DynamoDB table.
 											The <code>DYNAMODB_TABLE_NAME</code> is an environment variable passed to the function.
 											<strong>Function Name: pipelines-dashboard</strong>
 <pre><code>
@@ -127,11 +127,11 @@ def put_item_in_dynamodb(pipeline_data, region):
 </code></pre>
 										Also, make sure the cloudwatch events rule has the permission to trigger the lambda function.
 										<pre><code>aws lambda add-permission
-  --function-name 'arn:aws:lambda:ap-southeast-2:123456789012:function:pipelines-dashboard'
+  --function-name 'arn:aws:lambda:ap-southeast-1:123456789012:function:pipelines-dashboard'
   --statement-id 987654321
   --action 'lambda:InvokeFunction'
   --principal 'events.amazonaws.com'
-  --source-arn 'arn:aws:events:ap-southeast-2:123456789012:rule/TriggerPipelinesDashboard'
+  --source-arn 'arn:aws:events:ap-southeast-1:123456789012:rule/TriggerPipelinesDashboard'
 										</code></pre>
 										</ul>
                     <b>DYNAMODB TABLE</b>
